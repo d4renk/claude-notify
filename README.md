@@ -59,35 +59,128 @@
 
 ## 配置说明
 
-### 主要参数
+### 环境变量分类
 
-支持以下环境变量：
+#### 📌 基础配置（可选，有默认值）
+
+这些配置项都有默认值，可以不设置：
 
 ```bash
-# 长任务阈值（秒），超过此时间才推送
+# 长任务阈值（秒），默认 180
 export CLAUDE_NOTIFY_LONG_TASK_SECONDS=180
 
-# 状态文件存储目录
+# 状态文件存储目录，默认 ~/.claude/claude-notify-state
 export CLAUDE_NOTIFY_STATE_DIR=~/.claude/claude-notify-state
 
-# 通知标题前缀
+# 通知标题前缀，默认 "Claude Code"
 export CLAUDE_NOTIFY_TITLE_PREFIX="Claude Code"
 
-# 是否启用一言（随机句子），默认关闭
+# 是否启用一言（随机句子），默认 false
 export HITOKOTO=false
 
-# Debug 模式（启用后记录详细日志）
+# Debug 模式（启用后记录详细日志到 hook.log），默认 false
 export CLAUDE_NOTIFY_DEBUG=false
 ```
 
-### 支持的推送服务
+#### 🔔 推送服务配置（必选其一）
 
-- **iOS**: Bark
-- **微信**: Server 酱、PushPlus、企业微信、WxPusher
-- **即时通讯**: Telegram、钉钉、飞书、QQ 机器人
-- **通用**: Ntfy、Gotify、SMTP 邮件、自定义 Webhook
+**至少配置一个推送服务**，否则无法接收通知。以下按推荐度排序：
 
-所有推送服务配置都通过环境变量设置，详见推送服务文档。
+##### 推荐服务（配置简单）
+
+```bash
+# 1. Bark (iOS 推荐) - 只需一个变量
+export BARK_PUSH=https://api.day.app/YOUR_KEY
+
+# 2. Server 酱 (微信推荐) - 只需一个变量
+export PUSH_KEY=YOUR_SERVER_CHAN_KEY
+
+# 3. Telegram - 需要两个变量
+export TG_BOT_TOKEN=YOUR_BOT_TOKEN
+export TG_USER_ID=YOUR_USER_ID
+
+# 4. 钉钉机器人 - 需要两个变量
+export DD_BOT_TOKEN=YOUR_TOKEN
+export DD_BOT_SECRET=YOUR_SECRET
+
+# 5. 飞书机器人 - 只需一个变量
+export FSKEY=YOUR_KEY
+```
+
+##### 其他支持的服务
+
+<details>
+<summary>点击展开查看完整列表</summary>
+
+| 服务名称 | 必需变量 | 可选变量 |
+|---------|---------|---------|
+| **Bark (iOS)** | `BARK_PUSH` | `BARK_ICON`, `BARK_SOUND`, `BARK_GROUP`, `BARK_LEVEL`, `BARK_ARCHIVE`, `BARK_URL` |
+| **Server 酱** | `PUSH_KEY` | - |
+| **PushDeer** | `DEER_KEY` | `DEER_URL` |
+| **PushPlus** | `PUSH_PLUS_TOKEN` | `PUSH_PLUS_USER`, `PUSH_PLUS_TEMPLATE`, `PUSH_PLUS_CHANNEL`, `PUSH_PLUS_WEBHOOK`, `PUSH_PLUS_CALLBACKURL`, `PUSH_PLUS_TO` |
+| **企业微信机器人** | `QYWX_KEY` | `QYWX_ORIGIN` |
+| **企业微信应用** | `QYWX_AM` | - |
+| **钉钉机器人** | `DD_BOT_TOKEN`, `DD_BOT_SECRET` | - |
+| **飞书机器人** | `FSKEY` | `FSSECRET` |
+| **Telegram** | `TG_BOT_TOKEN`, `TG_USER_ID` | `TG_API_HOST`, `TG_PROXY_HOST`, `TG_PROXY_PORT`, `TG_PROXY_AUTH` |
+| **WxPusher** | `WXPUSHER_APP_TOKEN` | `WXPUSHER_TOPIC_IDS`, `WXPUSHER_UIDS` |
+| **Ntfy** | `NTFY_TOPIC` | `NTFY_URL`, `NTFY_PRIORITY`, `NTFY_TOKEN`, `NTFY_USERNAME`, `NTFY_PASSWORD`, `NTFY_ACTIONS` |
+| **Gotify** | `GOTIFY_URL`, `GOTIFY_TOKEN` | `GOTIFY_PRIORITY` |
+| **iGot** | `IGOT_PUSH_KEY` | - |
+| **QQ 机器人 (go-cqhttp)** | `GOBOT_URL`, `GOBOT_QQ` | `GOBOT_TOKEN` |
+| **QQ 机器人 (Chronocat)** | `CHRONOCAT_URL`, `CHRONOCAT_QQ` | `CHRONOCAT_TOKEN` |
+| **微加机器人** | `WE_PLUS_BOT_TOKEN`, `WE_PLUS_BOT_RECEIVER` | `WE_PLUS_BOT_VERSION` |
+| **Qmsg 酱** | `QMSG_KEY` | `QMSG_TYPE` |
+| **智能微秘书** | `AIBOTK_KEY` | `AIBOTK_TYPE`, `AIBOTK_NAME` |
+| **PushMe** | `PUSHME_KEY` | `PUSHME_URL` |
+| **Chat (Synology)** | `CHAT_URL`, `CHAT_TOKEN` | - |
+| **SMTP 邮件** | `SMTP_SERVER`, `SMTP_EMAIL`, `SMTP_PASSWORD` | `SMTP_SSL`, `SMTP_NAME` |
+| **自定义 Webhook** | `WEBHOOK_URL` | `WEBHOOK_METHOD`, `WEBHOOK_CONTENT_TYPE`, `WEBHOOK_BODY`, `WEBHOOK_HEADERS` |
+
+</details>
+
+### 配置示例
+
+#### 最小化配置（推荐）
+
+```bash
+# 在 ~/.bashrc 或 ~/.zshrc 中添加
+
+# 选择一个推送服务（三选一）
+export BARK_PUSH=https://api.day.app/YOUR_KEY          # iOS 用户
+# export PUSH_KEY=YOUR_KEY                             # 微信用户
+# export TG_BOT_TOKEN=xxx; export TG_USER_ID=xxx       # Telegram 用户
+```
+
+#### 完整配置示例
+
+```bash
+# 在 ~/.bashrc 或 ~/.zshrc 中添加
+
+# ========================================
+# Claude Notify 配置
+# ========================================
+
+# 基础配置（可选）
+export CLAUDE_NOTIFY_LONG_TASK_SECONDS=180
+export CLAUDE_NOTIFY_DEBUG=false
+export HITOKOTO=false
+
+# 推送服务（必选其一）
+export BARK_PUSH=https://api.day.app/YOUR_KEY
+export BARK_GROUP=Claude
+export BARK_SOUND=bell
+```
+
+### 获取推送服务密钥
+
+- **Bark**: [App Store 下载](https://apps.apple.com/cn/app/bark-customed-notifications/id1403753865) → 打开获取 Key
+- **Server 酱**: [https://sct.ftqq.com](https://sct.ftqq.com) → 登录获取 SendKey
+- **Telegram**: [@BotFather](https://t.me/botfather) 创建机器人 → 获取 Token 和 User ID
+- **钉钉**: 群设置 → 智能群助手 → 添加机器人 → 自定义机器人
+- **飞书**: [开放平台](https://open.feishu.cn) → 创建机器人 → 获取 Webhook
+
+更多服务配置请参考 `.env.example` 文件。
 
 ## 工作原理
 
