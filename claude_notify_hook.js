@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Claudecli Hook Push - Node.js 版本
+ * Claude Notify Hook - Node.js 版本
  * 监听 Claude Code Hook 事件，自动推送长耗时任务的状态通知
  *
  * 支持的 Hook 事件:
@@ -22,14 +22,14 @@ const { sendNotify } = require(path.join(__dirname, 'notify.js'));
 // 配置参数
 const DEFAULT_LONG_SECONDS = 180;
 const LONG_TASK_SECONDS = parseInt(
-  process.env.CLAUDECLI_LONG_TASK_SECONDS || DEFAULT_LONG_SECONDS,
+  process.env.CLAUDE_NOTIFY_LONG_TASK_SECONDS || DEFAULT_LONG_SECONDS,
   10
 );
 const STATE_DIR = path.resolve(
-  process.env.CLAUDECLI_STATE_DIR?.replace('~', process.env.HOME) ||
-    path.join(process.env.HOME, '.claude', 'claudecli-hook-state')
+  process.env.CLAUDE_NOTIFY_STATE_DIR?.replace('~', process.env.HOME) ||
+    path.join(process.env.HOME, '.claude', 'claude-notify-state')
 );
-const TITLE_PREFIX = process.env.CLAUDECLI_NOTIFY_TITLE_PREFIX || 'Claude Code';
+const TITLE_PREFIX = process.env.CLAUDE_NOTIFY_TITLE_PREFIX || 'Claude Code';
 const LOG_FILE = path.join(STATE_DIR, 'hook.log');
 
 // 确保状态目录存在

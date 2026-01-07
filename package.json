@@ -1,8 +1,8 @@
 {
-  "name": "claudecli-hook-push",
-  "version": "1.0.0",
+  "name": "claude-notify",
+  "version": "2.0.0",
   "description": "为 Claude Code 提供智能任务完成通知的 Hook 工具",
-  "main": "claudecli_hook_push.js",
+  "main": "claude_notify_hook.js",
   "scripts": {
     "test": "node send-notify.js \"测试\" \"这是一条测试消息\""
   },

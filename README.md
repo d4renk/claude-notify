@@ -1,4 +1,4 @@
-# Claudecli Hook Push
+# Claude Notify
 
 为 Claude Code 提供智能任务完成通知的 Hook 工具。
 
@@ -25,7 +25,7 @@
 1. **克隆项目**
    ```bash
    git clone <repository-url>
-   cd Claudecli-push
+   cd claude-notify
    ```
 
 2. **运行安装脚本**
@@ -33,20 +33,25 @@
    bash install.sh
    ```
 
-3. **配置推送服务**
-   ```bash
-   # 编辑环境变量配置文件
-   vim .env
+3. **配置环境变量**
 
-   # 填写至少一个推送服务的配置
-   # 例如 Bark：
+   在您的 shell 配置文件（如 `~/.bashrc` 或 `~/.zshrc`）中添加：
+   ```bash
+   # Claude Notify 配置
+   export CLAUDE_NOTIFY_LONG_TASK_SECONDS=180
+   export CLAUDE_NOTIFY_STATE_DIR=~/.claude/claude-notify-state
+   export CLAUDE_NOTIFY_TITLE_PREFIX="Claude Code"
+
+   # 推送服务配置（选择您需要的服务）
    export BARK_PUSH=https://api.day.app/YOUR_KEY
+   # export PUSH_KEY=YOUR_SERVER_CHAN_KEY
+   # ... 其他推送服务配置
    ```
 
-4. **加载配置并测试**
+4. **重新加载配置并测试**
    ```bash
    # 加载环境变量
-   source .env
+   source ~/.bashrc  # 或 source ~/.zshrc
 
    # 测试推送
    node send-notify.js "测试" "这是一条测试消息"
@@ -56,17 +61,20 @@
 
 ### 主要参数
 
-在 `.env` 环境变量配置文件中可配置：
+支持以下环境变量：
 
 ```bash
 # 长任务阈值（秒），超过此时间才推送
-export CLAUDECLI_LONG_TASK_SECONDS=180
+export CLAUDE_NOTIFY_LONG_TASK_SECONDS=180
 
 # 状态文件存储目录
-export CLAUDECLI_STATE_DIR=~/.claude/claudecli-hook-state
+export CLAUDE_NOTIFY_STATE_DIR=~/.claude/claude-notify-state
 
 # 通知标题前缀
-export CLAUDECLI_NOTIFY_TITLE_PREFIX="Claude Code"
+export CLAUDE_NOTIFY_TITLE_PREFIX="Claude Code"
+
+# 是否启用一言（随机句子），默认关闭
+export HITOKOTO=false
 ```
 
 ### 支持的推送服务
@@ -76,7 +84,7 @@ export CLAUDECLI_NOTIFY_TITLE_PREFIX="Claude Code"
 - **即时通讯**: Telegram、钉钉、飞书、QQ 机器人
 - **通用**: Ntfy、Gotify、SMTP 邮件、自定义 Webhook
 
-详见 `.env.example` 查看完整配置选项。
+所有推送服务配置都通过环境变量设置，详见推送服务文档。
 
 ## 工作原理
 
@@ -104,17 +112,16 @@ bash uninstall.sh
 |------|------|
 | `install.sh` | 自动安装脚本 |
 | `uninstall.sh` | 卸载脚本 |
-| `claudecli_hook_push.js` | 核心 Hook 处理逻辑 |
+| `claude_notify_hook.js` | 核心 Hook 处理逻辑 |
 | `notify.js` | 推送服务封装 |
 | `send-notify.js` | 手动推送测试工具 |
-| `.env.example` | 环境变量配置模板 |
 
 ## 注意事项
 
-1. **首次使用前务必执行** `source .env` 加载环境变量
+1. **配置环境变量**：所有配置通过 shell 环境变量设置（如 ~/.bashrc）
 2. 推送服务需要自行注册并获取 Token/Key
 3. Hook 配置文件位于 `~/.claude/settings.json`
-4. 状态文件存储于 `~/.claude/claudecli-hook-state/`
+4. 状态文件存储于 `~/.claude/claude-notify-state/`
 
 ## 许可证
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claudecli Hook Push - 卸载脚本（仅限 Linux）
+# Claude Notify - 卸载脚本（仅限 Linux）
 
 set -e
 
@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}  Claudecli Hook Push 卸载向导${NC}"
+echo -e "${BLUE}  Claude Notify 卸载向导${NC}"
 echo -e "${BLUE}  (Linux 系统专用)${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
@@ -44,7 +44,7 @@ REMOVED=0
 
 # 检查用户级配置
 if [ -f "$CLAUDE_USER_SETTINGS" ]; then
-    if grep -q "claudecli_hook_push.js" "$CLAUDE_USER_SETTINGS"; then
+    if grep -q "claude_notify_hook.js" "$CLAUDE_USER_SETTINGS"; then
         echo -e "${YELLOW}发现用户级配置: $CLAUDE_USER_SETTINGS${NC}"
         read -p "是否移除用户级 Hook 配置？[y/N]: " REMOVE_USER
 
@@ -65,7 +65,7 @@ fi
 
 # 检查项目级配置
 if [ -f "$CLAUDE_PROJECT_SETTINGS" ]; then
-    if grep -q "claudecli_hook_push.js" "$CLAUDE_PROJECT_SETTINGS"; then
+    if grep -q "claude_notify_hook.js" "$CLAUDE_PROJECT_SETTINGS"; then
         echo -e "${YELLOW}发现项目级配置: $CLAUDE_PROJECT_SETTINGS${NC}"
         read -p "是否移除项目级 Hook 配置？[y/N]: " REMOVE_PROJECT
 
@@ -92,7 +92,7 @@ echo ""
 # 清理状态文件
 echo -e "${YELLOW}[2/3]${NC} 清理状态文件..."
 
-STATE_DIR="${CLAUDECLI_STATE_DIR:-$HOME/.claude/claudecli-hook-state}"
+STATE_DIR="${CLAUDE_NOTIFY_STATE_DIR:-$HOME/.claude/claude-notify-state}"
 STATE_DIR="${STATE_DIR/#\~/$HOME}"
 
 if [ -d "$STATE_DIR" ]; then

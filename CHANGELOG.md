@@ -1,5 +1,27 @@
 # 更新日志
 
+## v2.0.0 - 2025-01-07
+
+### 🎯 重大更新
+- **项目重命名**：Claudecli-push → Claude Notify
+- **统一命名规范**：
+  - 环境变量前缀：`CLAUDECLI_` → `CLAUDE_NOTIFY_`
+  - 状态目录：`claudecli-hook-state` → `claude-notify-state`
+  - 主文件：`claudecli_hook_push.js` → `claude_notify_hook.js`
+
+### 🔒 安全更新
+- **依赖升级**：nodemailer 6.9.0 → 7.0.12
+  - 修复邮件域混淆漏洞 (GHSA-mm7p-fcc7-pg87)
+  - 修复地址解析器递归 DoS (GHSA-rcmh-qjqh-p98v)
+  - 修复不受控递归 DoS (GHSA-46j5-6fg5-4gv3)
+- **兼容性测试**：✅ 完全兼容 Node.js 20.x LTS
+
+### 🐛 修复
+- **HITOKOTO 默认状态**：修改为关闭（false）
+- 优化判断逻辑，仅当明确设置为 true 时启用
+
+---
+
 ## v1.2.0 - 2025-01-07
 
 ### 🔧 优化

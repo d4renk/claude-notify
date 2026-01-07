@@ -18,7 +18,7 @@
 # 脚本
 !install.sh
 !uninstall.sh
-!claudecli_hook_push.js
+!claude_notify_hook.js
 !send-notify.js
 !notify.js
 
