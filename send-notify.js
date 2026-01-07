@@ -23,7 +23,16 @@ if (!content) {
 
 // 发送通知
 sendNotify(title, content)
-  .then(() => {
+  .then((result) => {
+    if (result && result.summary) {
+      const { success, failed, skipped, unknown } = result.summary;
+      console.log(
+        `推送结果: 成功 ${success} 失败 ${failed} 跳过 ${skipped} 未知 ${unknown}`
+      );
+      const hardFail = failed > 0 && success === 0;
+      process.exit(hardFail ? 1 : 0);
+      return;
+    }
     console.log('✓ 推送发送成功');
     process.exit(0);
   })

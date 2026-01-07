@@ -12,6 +12,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const util = require('node:util');
 const { sendNotify } = require(path.join(__dirname, 'notify.js'));
 
 // ========================================
@@ -37,13 +38,72 @@ if (!fs.existsSync(STATE_DIR)) {
 }
 
 // 日志函数
+function formatShanghaiTime(date = new Date()) {
+  return date.toLocaleString('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    hour12: false,
+  });
+}
+
 function log(message) {
-  const timestamp = new Date().toISOString();
+  const timestamp = formatShanghaiTime();
   const logMessage = `[${timestamp}] ${message}\n`;
   try {
     fs.appendFileSync(LOG_FILE, logMessage, 'utf-8');
   } catch (error) {
     // 忽略日志写入错误
+  }
+}
+
+async function withNotifyLogs(fn) {
+  const originalLog = console.log;
+  const originalError = console.error;
+  console.log = (...args) => {
+    log(`notify: ${util.format(...args)}`);
+    originalLog(...args);
+  };
+  console.error = (...args) => {
+    log(`notify: ${util.format(...args)}`);
+    originalError(...args);
+  };
+  try {
+    return await fn();
+  } finally {
+    console.log = originalLog;
+    console.error = originalError;
+  }
+}
+
+function logNotifySummary(result) {
+  if (!result || !result.summary) {
+    return;
+  }
+  const { success, failed, skipped, unknown } = result.summary;
+  log(`通知结果: 成功 ${success} 失败 ${failed} 跳过 ${skipped} 未知 ${unknown}`);
+  const issues = (result.details || []).filter(
+    (item) => item.status === 'failed' || item.status === 'unknown'
+  );
+  const formatRaw = (raw) => {
+    if (raw === undefined) return '';
+    try {
+      const serialized =
+        typeof raw === 'string' ? raw : JSON.stringify(raw);
+      return serialized.length > 500
+        ? serialized.slice(0, 500) + '...'
+        : serialized;
+    } catch (error) {
+      return String(raw);
+    }
+  };
+  for (const item of issues) {
+    const suffix = item.error ? ` - ${item.error}` : '';
+    log(`通知通道异常: ${item.name}${suffix}`);
+    if (item.raw !== undefined) {
+      const rawText = formatRaw(item.raw);
+      if (rawText) {
+        log(`通知通道响应: ${item.name} - ${rawText}`);
+      }
+    }
   }
 }
 
@@ -346,7 +406,8 @@ async function handleNotification(payload) {
 📁 **目录**: ${state.cwd}
 `;
 
-  await sendNotify(title, content);
+  const notifyResult = await withNotifyLogs(() => sendNotify(title, content));
+  logNotifySummary(notifyResult);
 
   // 标记已通知
   state.notified_user_action = true;
@@ -411,11 +472,12 @@ async function handleStop(payload) {
 
 📁 **目录**: ${state.cwd}
 
-🕐 **完成时间**: ${new Date().toLocaleString('zh-CN', { hour12: false })}
+🕐 **完成时间**: ${formatShanghaiTime()}
 `;
 
-  await sendNotify(title, content);
-  log(`通知已发送: ${title}`);
+  const notifyResult = await withNotifyLogs(() => sendNotify(title, content));
+  logNotifySummary(notifyResult);
+  log(`通知已尝试发送: ${title}`);
 
   // 清理状态
   deleteState(sessionId);
@@ -463,7 +525,8 @@ async function handlePreCompact(payload) {
 💬 **说明**: Claude 正在压缩对话上下文以继续工作
 `;
 
-  await sendNotify(title, content);
+  const notifyResult = await withNotifyLogs(() => sendNotify(title, content));
+  logNotifySummary(notifyResult);
 
   // 标记已通知
   state.notified_compact = true;

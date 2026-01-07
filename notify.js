@@ -265,7 +265,11 @@ function gobotNotify(text, desp) {
         } catch (e) {
           $.logErr(e, resp);
         } finally {
-          resolve(data);
+          if (err) {
+            resolve({ __error: err?.message || String(err) });
+          } else {
+            resolve(data);
+          }
         }
       });
     } else {
@@ -313,7 +317,11 @@ function serverNotify(text, desp) {
         } catch (e) {
           $.logErr(e, resp);
         } finally {
-          resolve(data);
+          if (err) {
+            resolve({ __error: err?.message || String(err) });
+          } else {
+            resolve(data);
+          }
         }
       });
     } else {
@@ -534,6 +542,13 @@ function ddBotNotify(text, desp) {
       },
       timeout,
     };
+    const redactedUrl = options.url
+      .replace(/access_token=[^&]+/, 'access_token=***')
+      .replace(/sign=[^&]+/, 'sign=***');
+    const meta = {
+      __url: redactedUrl,
+      __payload: options.json,
+    };
     if (DD_BOT_TOKEN && DD_BOT_SECRET) {
       const crypto = require('crypto');
       const dateNow = Date.now();
@@ -551,11 +566,27 @@ function ddBotNotify(text, desp) {
             } else {
               console.log(`钉钉发送通知消息异常 ${data.errmsg}\n`);
             }
+            console.log(
+              '钉钉响应:',
+              JSON.stringify({
+                errcode: data?.errcode,
+                errmsg: data?.errmsg,
+                url: redactedUrl,
+                payload: options.json,
+                response: data,
+              })
+            );
           }
         } catch (e) {
           $.logErr(e, resp);
         } finally {
-          resolve(data);
+          if (err) {
+            resolve({ __error: err?.message || String(err), ...meta });
+          } else if (data && typeof data === 'object') {
+            resolve({ ...data, ...meta });
+          } else {
+            resolve({ __response: data, ...meta });
+          }
         }
       });
     } else if (DD_BOT_TOKEN) {
@@ -569,11 +600,27 @@ function ddBotNotify(text, desp) {
             } else {
               console.log(`钉钉发送通知消息异常 ${data.errmsg}\n`);
             }
+            console.log(
+              '钉钉响应:',
+              JSON.stringify({
+                errcode: data?.errcode,
+                errmsg: data?.errmsg,
+                url: redactedUrl,
+                payload: options.json,
+                response: data,
+              })
+            );
           }
         } catch (e) {
           $.logErr(e, resp);
         } finally {
-          resolve(data);
+          if (err) {
+            resolve({ __error: err?.message || String(err), ...meta });
+          } else if (data && typeof data === 'object') {
+            resolve({ ...data, ...meta });
+          } else {
+            resolve({ __response: data, ...meta });
+          }
         }
       });
     } else {
@@ -1494,12 +1541,56 @@ function formatBodyFun(contentType, body) {
   return {};
 }
 
+function normalizeNotifyResult(value) {
+  const raw = value;
+  if (value === undefined || value === null) {
+    return { status: 'skipped', raw };
+  }
+  if (value === true) return { status: 'success' };
+  if (value === false) return { status: 'failed' };
+  if (typeof value === 'object') {
+    if (value.__error) {
+      return { status: 'failed', error: value.__error, raw };
+    }
+    if (value.errcode !== undefined) {
+      return value.errcode === 0
+        ? { status: 'success', raw }
+        : {
+            status: 'failed',
+            error: value.errmsg || String(value.errcode),
+            raw,
+          };
+    }
+    if (value.ok !== undefined) {
+      return value.ok === true
+        ? { status: 'success', raw }
+        : { status: 'failed', error: value.description || 'not ok', raw };
+    }
+    if (value.code !== undefined) {
+      return value.code === 0
+        ? { status: 'success', raw }
+        : { status: 'failed', error: String(value.code), raw };
+    }
+    if (value.status !== undefined) {
+      return value.status === 'success' || value.status === 200
+        ? { status: 'success', raw }
+        : { status: 'failed', error: String(value.status), raw };
+    }
+    if (value.success !== undefined) {
+      return value.success === true
+        ? { status: 'success', raw }
+        : { status: 'failed', error: 'success=false', raw };
+    }
+  }
+  return { status: 'unknown', raw };
+}
+
 /**
  * sendNotify 推送通知功能
  * @param text 通知头
  * @param desp 通知体
  * @param params 某些推送通知方式点击弹窗可跳转, 例：{ url: 'https://abc.com' }
- * @returns {Promise<unknown>}
+ * @returns {Promise<{summary: {success: number, failed: number, skipped: number, unknown: number}, details: Array<{name: string, status: string, error?: string}>}>}
  */
 async function sendNotify(text, desp, params = {}) {
   // 根据标题跳过一些消息推送，环境变量：SKIP_PUSH_TITLE 用回车分隔
@@ -1507,7 +1598,10 @@ async function sendNotify(text, desp, params = {}) {
   if (skipTitle) {
     if (skipTitle.split('\n').includes(text)) {
       console.info(text + '在 SKIP_PUSH_TITLE 环境变量内，跳过推送');
-      return;
+      return {
+        summary: { success: 0, failed: 0, skipped: 1, unknown: 0 },
+        details: [{ name: 'SKIP_PUSH_TITLE', status: 'skipped' }],
+      };
     }
   }
 
@@ -1515,30 +1609,50 @@ async function sendNotify(text, desp, params = {}) {
     desp += '\n\n' + (await one());
   }
 
-  await Promise.all([
-    serverNotify(text, desp), // 微信server酱
-    pushPlusNotify(text, desp), // pushplus
-    wePlusBotNotify(text, desp), // 微加机器人
-    barkNotify(text, desp, params), // iOS Bark APP
-    tgBotNotify(text, desp), // telegram 机器人
-    ddBotNotify(text, desp), // 钉钉机器人
-    qywxBotNotify(text, desp), // 企业微信机器人
-    qywxamNotify(text, desp), // 企业微信应用消息推送
-    iGotNotify(text, desp, params), // iGot
-    gobotNotify(text, desp), // go-cqhttp
-    gotifyNotify(text, desp), // gotify
-    chatNotify(text, desp), // synolog chat
-    pushDeerNotify(text, desp), // PushDeer
-    aibotkNotify(text, desp), // 智能微秘书
-    fsBotNotify(text, desp), // 飞书机器人
-    smtpNotify(text, desp), // SMTP 邮件
-    pushMeNotify(text, desp, params), // PushMe
-    chronocatNotify(text, desp), // Chronocat
-    webhookNotify(text, desp), // 自定义通知
-    qmsgNotify(text, desp), // 自定义通知
-    ntfyNotify(text, desp), // Ntfy
-    wxPusherNotify(text, desp), // wxpusher
-  ]);
+  const tasks = [
+    { name: 'Server酱', promise: serverNotify(text, desp) },
+    { name: 'PushPlus', promise: pushPlusNotify(text, desp) },
+    { name: '微加机器人', promise: wePlusBotNotify(text, desp) },
+    { name: 'Bark', promise: barkNotify(text, desp, params) },
+    { name: 'Telegram', promise: tgBotNotify(text, desp) },
+    { name: '钉钉', promise: ddBotNotify(text, desp) },
+    { name: '企业微信机器人', promise: qywxBotNotify(text, desp) },
+    { name: '企业微信应用', promise: qywxamNotify(text, desp) },
+    { name: 'iGot', promise: iGotNotify(text, desp, params) },
+    { name: 'QQ机器人(go-cqhttp)', promise: gobotNotify(text, desp) },
+    { name: 'Gotify', promise: gotifyNotify(text, desp) },
+    { name: 'Synology Chat', promise: chatNotify(text, desp) },
+    { name: 'PushDeer', promise: pushDeerNotify(text, desp) },
+    { name: '智能微秘书', promise: aibotkNotify(text, desp) },
+    { name: '飞书', promise: fsBotNotify(text, desp) },
+    { name: 'SMTP', promise: smtpNotify(text, desp) },
+    { name: 'PushMe', promise: pushMeNotify(text, desp, params) },
+    { name: 'Chronocat', promise: chronocatNotify(text, desp) },
+    { name: 'Webhook', promise: webhookNotify(text, desp) },
+    { name: 'Qmsg', promise: qmsgNotify(text, desp) },
+    { name: 'Ntfy', promise: ntfyNotify(text, desp) },
+    { name: 'WxPusher', promise: wxPusherNotify(text, desp) },
+  ];
+
+  const results = await Promise.allSettled(tasks.map((t) => t.promise));
+  const details = results.map((res, idx) => {
+    const name = tasks[idx].name;
+    if (res.status === 'rejected') {
+      return { name, status: 'failed', error: String(res.reason || 'error') };
+    }
+    const normalized = normalizeNotifyResult(res.value);
+    return { name, ...normalized };
+  });
+
+  const summary = details.reduce(
+    (acc, item) => {
+      acc[item.status] = (acc[item.status] || 0) + 1;
+      return acc;
+    },
+    { success: 0, failed: 0, skipped: 0, unknown: 0 },
+  );
+
+  return { summary, details };
 }
 
 module.exports = {
